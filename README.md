@@ -12,3 +12,4 @@ __Функции__:
 + add 
 + delete
 + exit
++ pass -c

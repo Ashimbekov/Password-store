@@ -1,5 +1,6 @@
 import json
 import base64
+import pyperclip
 
 def create_password_store():
     store = {}
@@ -30,7 +31,7 @@ def decrypt_password(encrypted_password):
     return decrypted_password
 
 def add_password(store):
-    service = input("Введите название сервиса или сайта: ")
+    service = input("Введите название сервиса: ")
     login = input("Введите логин: ")
     password = input("Введите пароль: ")
 
@@ -90,6 +91,51 @@ def delete_password(store):
         print("Пароль удален.")
     else:
         print("Пароль не найден.")
+        
+def list_accounts(store, service):
+    found = False
+
+    for category in store:
+        for subcategory in store[category]:
+            if service in store[category][subcategory]:
+                found = True
+                accounts = store[category][subcategory]
+
+                print(f"Аккаунты для {service}:")
+                for index, (account, credentials) in enumerate(accounts.items(), start=1):
+                    print(f"{index}. {credentials['login']}")
+
+    if not found:
+        print("Сервис не найден.")        
+    
+
+def copy_password(store, command):
+    parts = command.split('/')
+    if len(parts) != 2:
+        print("Некорректный формат команды.")
+        return False
+
+    if not command.startswith('pass c'):
+        print("Некорректная команда. Используйте 'pass c' для копирования пароля.")
+        return False
+
+    service = parts[0].strip()[8:]
+    login = parts[1].strip()
+
+    for category in store:
+        for subcategory in store[category]:
+            for stored_service, credentials in store[category][subcategory].items():
+                stored_login = credentials['login'].lower()  # Приводим к нижнему регистру
+                stored_password = credentials['password']
+                
+                if stored_service.lower() == service.lower() and stored_login == login.lower():
+                    decrypted_password = decrypt_password(stored_password)
+                    pyperclip.copy(decrypted_password)
+                    print("Пароль скопирован в буфер обмена.")
+                    return True
+
+    print("Пароль не найден.")
+    return False
 
 def main():
     store = load_password_store()
@@ -97,7 +143,13 @@ def main():
         command = input("Введите команду: ")
 
         if command.startswith("pass "):
-            get_password(store, command[5:])
+            if command == "pass list":
+                service = input("Введите название сервиса: ")
+                list_accounts(store, service)
+            elif command.startswith("pass c"):
+                copy_password(store, command[7:])
+            else:
+                get_password(store, command[5:])
         elif command == "add":
             add_password(store)
         elif command == "delete":
